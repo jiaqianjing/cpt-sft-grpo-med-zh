@@ -42,6 +42,8 @@ SFT = R1 - R0      CPT = R3 - R1      GRPO = R4 - R3      CPT-ppl = PPL(R0) - PP
 
 ## Results (Qwen3-1.7B) — see [REPORT.md](./REPORT.md)
 
+![CPT→SFT→GRPO gain-attribution waterfall](assets/gain_waterfall.png)
+
 | Run | generative | knowledge | perplexity |
 |-----|:---:|:---:|:---:|
 | R0 base | 0.589 | 0.661 | 7.04 |
