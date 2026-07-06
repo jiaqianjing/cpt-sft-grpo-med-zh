@@ -1,0 +1,18 @@
+# Group task: CMMLU medical subjects (built-in cmmlu_* subtasks aggregated by mean acc).
+# NOTE: CMMLU uses `genetics` (NOT `medical_genetics`, which is an MMLU-only name).
+group: cmmlu_medical
+task:
+  - cmmlu_anatomy
+  - cmmlu_clinical_knowledge
+  - cmmlu_college_medicine
+  - cmmlu_genetics
+  - cmmlu_virology
+  - cmmlu_nutrition
+  - cmmlu_traditional_chinese_medicine
+  - cmmlu_professional_medicine
+aggregate_metric_list:
+  - metric: acc
+    aggregation: mean
+    weight_by_size: true
+metadata:
+  version: 1.0

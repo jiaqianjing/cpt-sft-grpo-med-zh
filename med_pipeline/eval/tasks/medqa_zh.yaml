@@ -1,0 +1,18 @@
+# Chinese MedQA (Mainland, Simplified) — verifiable 4-option MCQ. No built-in lm-eval task.
+# bigbio/med_qa requires trust_remote_code; gold letter is in `answer_idx`.
+task: medqa_zh
+dataset_path: bigbio/med_qa
+dataset_name: med_qa_zh_4options_source
+dataset_kwargs:
+  trust_remote_code: true
+test_split: test
+output_type: multiple_choice
+doc_to_text: !function utils.medqa_doc_to_text
+doc_to_choice: !function utils.medqa_doc_to_choice
+doc_to_target: !function utils.medqa_doc_to_target
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0

@@ -1,0 +1,16 @@
+# CMExam — Chinese medical licensing-exam MCQ. No built-in lm-eval task.
+# Gold letter in `Answer`; single-letter items only are scored here (multi-letter filtered
+# out is not automatic in lm-eval — CMExam is predominantly single-letter; re-check at run).
+task: cmexam
+dataset_path: fzkuji/CMExam
+test_split: test
+output_type: multiple_choice
+doc_to_text: !function utils.cmexam_doc_to_text
+doc_to_choice: !function utils.cmexam_doc_to_choice
+doc_to_target: !function utils.cmexam_doc_to_target
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0

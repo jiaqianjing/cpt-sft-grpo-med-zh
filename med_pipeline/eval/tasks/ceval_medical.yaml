@@ -1,0 +1,13 @@
+# Group task: C-Eval medical subjects (built-in ceval-valid_* subtasks; uses validation split
+# since C-Eval test gold is withheld). Aggregated by mean acc.
+group: ceval_medical
+task:
+  - ceval-valid_basic_medicine
+  - ceval-valid_clinical_medicine
+  - ceval-valid_physician
+aggregate_metric_list:
+  - metric: acc
+    aggregation: mean
+    weight_by_size: true
+metadata:
+  version: 1.0

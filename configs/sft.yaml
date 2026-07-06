@@ -1,0 +1,41 @@
+# LLaMA-Factory template for SFT (stage=sft). train/run_sft.py overlays model_name_or_path
+# (base OR the CPT checkpoint), output_dir, run_name, and hyperparameters before launch.
+### model
+model_name_or_path: Qwen/Qwen3-4B-Base
+trust_remote_code: false
+
+### method
+stage: sft
+do_train: true
+finetuning_type: full
+deepspeed: configs/ds_z3.json
+
+### dataset (sharegpt messages format; registered by train/lf_common.py)
+dataset: sft_zh_medical
+dataset_dir: data/llamafactory
+template: qwen
+cutoff_len: 4096
+packing: false
+preprocessing_num_workers: 32
+overwrite_cache: true
+
+### output
+output_dir: checkpoints/R3_cpt_sft
+logging_steps: 10
+save_steps: 500
+save_total_limit: 2
+plot_loss: true
+overwrite_output_dir: true
+report_to: wandb
+run_name: R3_cpt_sft
+
+### train
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 2
+learning_rate: 1.0e-5
+num_train_epochs: 3.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+bf16: true
+flash_attn: fa2
+ddp_timeout: 180000000

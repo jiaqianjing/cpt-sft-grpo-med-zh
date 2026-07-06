@@ -1,0 +1,30 @@
+# secrets
+.env
+*.key
+
+# data & artifacts (large, regenerable)
+data/
+checkpoints/
+logs/
+wandb/
+*.arrow
+*.bin
+*.safetensors
+*.jsonl.gz
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.venv-train/
+.venv-grpo/
+.venv*/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# cloned third-party frameworks (have their own git history)
+third_party/
+
+# misc
+.DS_Store
