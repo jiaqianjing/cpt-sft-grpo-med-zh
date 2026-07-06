@@ -5,7 +5,18 @@
 ## 1. 喂的是什么数据
 
 **带可验证答案的选择题**（只要能自动判对错就行）。共 30k 条（本次用 12k），来自 MedQA-zh + CMExam
-的训练集。注意：**只给题目，不给参考推理**——推理由模型自己生成，对错由程序判定。真实样本：
+的训练集。注意：**只给题目，不给参考推理**——推理由模型自己生成，对错由程序判定。
+
+**数据出处：**
+
+| 数据集 | 链接 | 说明 |
+|--------|------|------|
+| bigbio/med_qa (med_qa_zh_4options) | [🤗 HF](https://huggingface.co/datasets/bigbio/med_qa) | 中国医学执业考试选择题，4 选项单答案 |
+| fzkuji/CMExam | [🤗 HF](https://huggingface.co/datasets/fzkuji/CMExam) | 中国医学考试题库，train 54k / val 6.8k / test 6.8k |
+
+> GRPO 仅使用**单选题**（exact-match 奖励可靠），多选题（如 CMB）不参与训练。
+
+真实样本：
 
 ```
 问题：卧位腰椎穿刺，脑脊液压力正常值是（　　）。

@@ -40,10 +40,45 @@
 
 ## 3. 数据
 
-- **CPT**：中文医学原始语料 ~**0.9B tokens**（TCM 为主：SylvanL‑TCM + ShizhenGPT 书籍/网页 + shibing624；偏向 base 较弱的领域）。留出 5M tokens 测困惑度。
-- **SFT**：**60k** CoT（FreedomIntelligence/medical‑o1‑reasoning‑SFT 中文 45k + Gemini‑flash‑lite 蒸馏、拒绝采样保留正确的 15k）。
-- **GRPO**：MedQA‑zh + CMExam 训练集 **30k** 可验证 MCQ（本次用 12k）。奖励 = 正确率(exact‑match) + 格式(`\boxed{}`)。
-- 评测测试集全部留出，从不参与训练。
+### 3.1 CPT — 中文医学原始语料，~0.9B tokens（TCM 为主）
+
+| 数据集 | 链接 | 说明 |
+|--------|------|------|
+| SylvanL/Traditional-Chinese-Medicine-Dataset-Pretrain | [🤗 HF](https://huggingface.co/datasets/SylvanL/Traditional-Chinese-Medicine-Dataset-Pretrain) | ~533k 条中医文本，~575MB，99%+ 中文；**主要语料** |
+| FreedomIntelligence/TCM-Pretrain-Data-ShizhenGPT | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/TCM-Pretrain-Data-ShizhenGPT) | TCM_Book_Corpus + TCM_Web_Corpus 两个子集 |
+| shibing624/medical (pretrain split) | [🤗 HF](https://huggingface.co/datasets/shibing624/medical) | 百科+教材，~0.2B tokens（需 `trust_remote_code`，可选） |
+
+偏向 base 较弱的中医领域，留出 5M tokens 测困惑度。
+
+### 3.2 SFT — 60k 中文医学 CoT 问答对
+
+| 数据集 | 链接 | 说明 |
+|--------|------|------|
+| FreedomIntelligence/medical-o1-reasoning-SFT | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/medical-o1-reasoning-SFT) | zh + zh_mix 子集，共 ~45k 条真实 CoT，**核心推理种子** |
+| FreedomIntelligence/Huatuo26M-Lite | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/Huatuo26M-Lite) | ~177k 医学 QA（无 CoT），采样扩展覆盖面 |
+| michaelwzhu/ShenNong_TCM_Dataset | [🤗 HF](https://huggingface.co/datasets/michaelwzhu/ShenNong_TCM_Dataset) | ~112k 中医 QA，采样补充 TCM 广度 |
+
+Gemini flash-lite 对无 CoT 样本蒸馏生成推理链，拒绝采样保留正确的 ~15k 条。
+
+### 3.3 GRPO — 30k 可验证中文医学 MCQ（本次用 12k）
+
+| 数据集 | 链接 | 说明 |
+|--------|------|------|
+| bigbio/med_qa (med_qa_zh_4options) | [🤗 HF](https://huggingface.co/datasets/bigbio/med_qa) | 中国医学执业考试选择题，4 选项单答案 |
+| fzkuji/CMExam | [🤗 HF](https://huggingface.co/datasets/fzkuji/CMExam) | 中国医学考试题库，train 54k / val 6.8k / test 6.8k |
+
+奖励 = 正确率(exact-match `\boxed{}`) + 格式(0.2)。仅使用单选题。
+
+### 3.4 Eval — 固定评测基准
+
+| 基准 | 链接 | 医学子集 |
+|------|------|----------|
+| CMMLU | [🤗 HF](https://huggingface.co/datasets/haonan-li/cmmlu) | anatomy, clinical_knowledge, college_medicine, genetics, virology, nutrition, traditional_chinese_medicine, professional_medicine |
+| C-Eval | [🤗 HF](https://huggingface.co/datasets/ceval/ceval-exam) | basic_medicine, clinical_medicine, physician |
+| CMB (CMB-Exam) | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/CMB) | 中国医学考试综合题库，test 11.2k（含多选） |
+| MedQA-zh | [🤗 HF](https://huggingface.co/datasets/bigbio/med_qa) | med_qa_zh_4options test split |
+
+评测测试集全部留出，从不参与训练。
 
 ---
 

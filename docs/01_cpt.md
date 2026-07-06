@@ -4,7 +4,17 @@
 
 ## 1. 喂的是什么数据
 
-**无标注的原始医学文本**（不是问答对）。约 0.9B tokens，以中医为主。下面是训练语料里的一条真实样本：
+**无标注的原始医学文本**（不是问答对）。约 0.9B tokens，以中医为主。
+
+**数据出处：**
+
+| 数据集 | 链接 | 说明 |
+|--------|------|------|
+| SylvanL/Traditional-Chinese-Medicine-Dataset-Pretrain | [🤗 HF](https://huggingface.co/datasets/SylvanL/Traditional-Chinese-Medicine-Dataset-Pretrain) | ~533k 条中医文本，~575MB，99%+ 中文；**主要语料** |
+| FreedomIntelligence/TCM-Pretrain-Data-ShizhenGPT | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/TCM-Pretrain-Data-ShizhenGPT) | 含 TCM_Book_Corpus 与 TCM_Web_Corpus 两个子集，补充中医书籍/网页文本 |
+| shibing624/medical | [🤗 HF](https://huggingface.co/datasets/shibing624/medical) | 百科+教材，~0.2B tokens（可选，需 `trust_remote_code`） |
+
+下面是训练语料里的一条真实样本：
 
 ```
 李某,男,28岁,2017年4月14日初诊。自诉持续性鼻塞10年有余,涕少质黏,色白或黄,头昏头重,

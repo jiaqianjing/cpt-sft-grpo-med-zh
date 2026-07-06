@@ -5,6 +5,17 @@
 ## 1. 喂的是什么数据
 
 **成对的示例**：问题 →（逐步推理）→ 标准答案。共 60k 条中文医学 CoT（思维链）。
+
+**数据出处：**
+
+| 数据集 | 链接 | 说明 |
+|--------|------|------|
+| FreedomIntelligence/medical-o1-reasoning-SFT | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/medical-o1-reasoning-SFT) | zh + zh_mix 子集，共 ~45k 条真实 CoT（思维链推理），**核心推理种子** |
+| FreedomIntelligence/Huatuo26M-Lite | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/Huatuo26M-Lite) | ~177k 医学 QA（无 CoT），采样用于扩展覆盖面 |
+| michaelwzhu/ShenNong_TCM_Dataset | [🤗 HF](https://huggingface.co/datasets/michaelwzhu/ShenNong_TCM_Dataset) | ~112k 中医 QA，采样用于补充 TCM 领域广度 |
+
+> 对无 CoT 样本额外使用 Gemini flash-lite 蒸馏生成推理链，拒绝采样保留答案正确的约 15k 条。
+
 下面是训练集里的一条**真实样本**：
 
 **输入（user）：**
