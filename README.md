@@ -7,7 +7,8 @@
 
 Measure and **cleanly separate** the gains of **CPT → SFT → GRPO** on a small base model
 (`Qwen3-1.7B-Base`) in the **Chinese medical** domain, tracked in Weights & Biases.
-Full write-up: **[REPORT.md](./REPORT.md)** · design: **[DESIGN.md](./DESIGN.md)**.
+Full write-up: **[REPORT.md](./REPORT.md)** · design: **[DESIGN.md](./DESIGN.md)** ·
+**stage-by-stage walkthrough with real data examples: [docs/](./docs/)**.
 
 > Started on Qwen3-4B-Base but it was near-ceiling on Chinese medical MCQ (naive SFT only
 > degraded it), so the study moved to the weaker **1.7B** base for measurable headroom.
