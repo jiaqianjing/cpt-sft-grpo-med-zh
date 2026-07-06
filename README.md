@@ -57,6 +57,41 @@ SFT = R1 - R0      CPT = R3 - R1      GRPO = R4 - R3      CPT-ppl = PPL(R0) - PP
 limited by a weak distillation teacher (Gemini flash-lite) — data quality dominated stage design.
 GRPO trained correctly (reward 0.40→0.625) but transferred little to test. See REPORT §5–7.
 
+## 📚 Training Data
+
+### CPT（继续预训练）— 原始医学文本，约 0.9B tokens
+
+| 数据集 | 说明 |
+|--------|------|
+| [SylvanL/Traditional-Chinese-Medicine-Dataset-Pretrain](https://huggingface.co/datasets/SylvanL/Traditional-Chinese-Medicine-Dataset-Pretrain) | ~533k 条中医文本，~575MB，99%+ 中文；主要语料 |
+| [FreedomIntelligence/TCM-Pretrain-Data-ShizhenGPT](https://huggingface.co/datasets/FreedomIntelligence/TCM-Pretrain-Data-ShizhenGPT) | 含 TCM_Book_Corpus 与 TCM_Web_Corpus 两个子集，补充 TCM 文本 |
+| [shibing624/medical](https://huggingface.co/datasets/shibing624/medical) | 百科+教材，~0.2B tokens（可选，需 `trust_remote_code`） |
+
+### SFT（监督微调）— 60k 医学 CoT 问答对
+
+| 数据集 | 说明 |
+|--------|------|
+| [FreedomIntelligence/medical-o1-reasoning-SFT](https://huggingface.co/datasets/FreedomIntelligence/medical-o1-reasoning-SFT) | zh + zh_mix 子集，共 ~45k 条真实 CoT（思维链推理），**核心推理种子** |
+| [FreedomIntelligence/Huatuo26M-Lite](https://huggingface.co/datasets/FreedomIntelligence/Huatuo26M-Lite) | ~177k 医学 QA（无 CoT），采样用于扩展覆盖面 |
+| [michaelwzhu/ShenNong_TCM_Dataset](https://huggingface.co/datasets/michaelwzhu/ShenNong_TCM_Dataset) | ~112k 中医 QA，采样用于补充 TCM 领域广度 |
+
+> SFT 阶段额外使用 Gemini flash-lite 对无 CoT 样本进行蒸馏，生成推理链。
+
+### GRPO（强化学习）— 可验证答案的选择题
+
+| 数据集 | 说明 |
+|--------|------|
+| [bigbio/med_qa](https://huggingface.co/datasets/bigbio/med_qa) (med_qa_zh_4options) | 中国医学执业考试选择题，4 选项单答案 |
+| [fzkuji/CMExam](https://huggingface.co/datasets/fzkuji/CMExam) | 中国医学考试题库，train 54k / val 6.8k / test 6.8k |
+
+### Eval（评测基准）
+
+| 基准 | 医学子集 |
+|------|----------|
+| [CMMLU](https://huggingface.co/datasets/haonan-li/cmmlu) | anatomy, clinical_knowledge, college_medicine, genetics, virology, nutrition, traditional_chinese_medicine, professional_medicine |
+| [C-Eval](https://huggingface.co/datasets/ceval/ceval-exam) | basic_medicine, clinical_medicine, physician |
+| [FreedomIntelligence/CMB](https://huggingface.co/datasets/FreedomIntelligence/CMB) (CMB-Exam) | 中国医学考试综合题库，test 11.2k（含多选） |
+
 ## Layout
 
 ```
