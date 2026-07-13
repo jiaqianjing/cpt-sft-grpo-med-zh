@@ -19,7 +19,9 @@ from configs.loader import load_config, load_secrets
 from configs.paths import Paths
 from med_pipeline.eval.results_io import load_all
 
-# canonical order for the waterfall
+# canonical stage order for the waterfall — these are LOGICAL stage keys used for gain
+# formulas and labels. Actual run-ids are looked up via run_map (identity by default; the
+# --runs flag remaps stages to alternate run-ids, e.g. the local-Qwen *b matrix for A/B).
 ORDER = ["R0_base", "R2_cpt", "R1_sft", "R3_cpt_sft", "R4_cpt_sft_grpo"]
 
 
@@ -55,15 +57,29 @@ def _delta(a, b):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=None)
+    ap.add_argument("--runs", default=None,
+                    help="comma-separated actual run-ids for the 5 stages, in ORDER: "
+                         "R0_base,R2_cpt,R1_sft,R3_cpt_sft,R4_cpt_sft_grpo. "
+                         "Defaults to identity; use to render an alternate matrix (e.g. *b).")
+    ap.add_argument("--name", default="gain-waterfall", help="W&B report run name")
     args = ap.parse_args()
     cfg = load_config(args.config)
     load_secrets()
     paths = Paths(cfg.root)
     runs = load_all(paths)
 
-    gen = {r: _gen(runs.get(r, {})) for r in ORDER}
-    know = {r: _know(runs.get(r, {})) for r in ORDER}
-    ppl = {r: _ppl(runs.get(r, {})) for r in ORDER}
+    # map each logical stage to an actual run-id (identity unless --runs overrides)
+    if args.runs:
+        override = [r.strip() for r in args.runs.split(",")]
+        if len(override) != len(ORDER):
+            raise SystemExit(f"--runs needs exactly {len(ORDER)} ids in ORDER {ORDER}")
+        run_map = dict(zip(ORDER, override))
+    else:
+        run_map = {stage: stage for stage in ORDER}
+
+    gen = {r: _gen(runs.get(run_map[r], {})) for r in ORDER}
+    know = {r: _know(runs.get(run_map[r], {})) for r in ORDER}
+    ppl = {r: _ppl(runs.get(run_map[r], {})) for r in ORDER}
 
     gains = {
         "gen/SFT_gain(R1-R0)": _delta(gen["R0_base"], gen["R1_sft"]),
@@ -79,20 +95,20 @@ def main() -> int:
     }
 
     # text summary
-    print("\n=== Eval by run ===")
-    print(f"{'run':<18}{'gen_acc':>10}{'know_acc':>10}{'ppl':>10}")
+    print(f"\n=== Eval by run ({args.name}) ===")
+    print(f"{'stage':<16}{'run_id':<20}{'gen_acc':>10}{'know_acc':>10}{'ppl':>10}")
     for r in ORDER:
         g = f"{gen[r]:.4f}" if gen[r] is not None else "-"
         k = f"{know[r]:.4f}" if know[r] is not None else "-"
         p = f"{ppl[r]:.2f}" if ppl[r] is not None else "-"
-        print(f"{r:<18}{g:>10}{k:>10}{p:>10}")
+        print(f"{r:<16}{run_map[r]:<20}{g:>10}{k:>10}{p:>10}")
     print("\n=== Gain attribution ===")
     for k, v in gains.items():
         print(f"  {k:<28} {v if v is not None else '(missing run)'}")
 
     import wandb
     run = wandb.init(project=cfg.wandb.project, entity=cfg.wandb.entity,
-                     name="gain-waterfall", job_type="report", reinit=True)
+                     name=args.name, job_type="report", reinit=True)
     table = wandb.Table(columns=["run", "gen_acc", "know_acc", "perplexity"])
     for r in ORDER:
         table.add_data(r, gen[r], know[r], ppl[r])

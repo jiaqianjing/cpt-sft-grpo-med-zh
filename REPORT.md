@@ -3,6 +3,11 @@
 **日期：** 2026-07-06  · **硬件：** 8×H100 80GB · **追踪：** W&B `med-1b7-cpt-sft-grpo`
 **基座：** `Qwen/Qwen3-1.7B-Base`（起初用 4B，因过强导致 SFT 无提升空间而下调，见 §6）
 
+> **更新 2026-07-12：** 已执行 §7①「强教师重蒸馏」——SFT CoT 教师由 Gemini flash-lite 换为本地
+> `Qwen/Qwen3.6-27B`（SGLang 8 卡张量并行，`enable_thinking=False`，质量门 + 拒绝采样）。
+> **SFT 生成增益由 −0.045 翻正为 +0.057**，全链路 0.589 → **0.654**（原 0.552）。这直接验证了本报告
+> 的核心判断：瓶颈是**数据质量**而非管线。原 Gemini 结果保留为对照（§4.1），本地 Qwen 新结果见 §4.2。
+
 ---
 
 ## 1. TL;DR
@@ -58,7 +63,8 @@
 | FreedomIntelligence/Huatuo26M-Lite | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/Huatuo26M-Lite) | ~177k 医学 QA（无 CoT），采样扩展覆盖面 |
 | michaelwzhu/ShenNong_TCM_Dataset | [🤗 HF](https://huggingface.co/datasets/michaelwzhu/ShenNong_TCM_Dataset) | ~112k 中医 QA，采样补充 TCM 广度 |
 
-Gemini flash-lite 对无 CoT 样本蒸馏生成推理链，拒绝采样保留正确的 ~15k 条。
+无 CoT 样本用本地 `Qwen/Qwen3.6-27B` 蒸馏生成推理链（`enable_thinking=False`、简洁 ≤6 步、
+质量门 + 拒绝采样），保留 ~16.6k 条；原 Gemini flash-lite（~15k 条）保留为 §4.1 对照。
 
 ### 3.3 GRPO — 30k 可验证中文医学 MCQ（本次用 12k）
 
@@ -84,6 +90,8 @@ Gemini flash-lite 对无 CoT 样本蒸馏生成推理链，拒绝采样保留正
 
 ## 4. 结果
 
+### 4.1 原始：Gemini flash-lite 教师（对照基线）
+
 | Run | 生成准确率 | 知识准确率 | 困惑度 |
 |-----|:---:|:---:|:---:|
 | R0 base | 0.589 | 0.661 | 7.04 |
@@ -101,6 +109,32 @@ Gemini flash-lite 对无 CoT 样本蒸馏生成推理链，拒绝采样保留正
 | GRPO (R4−R3) | **+0.015** | +0.010 | — |
 
 **GRPO 训练内奖励：** correctness 0.40 → **0.625**，total reward 0.46 → 0.82（KL≈6e‑4，稳定）。
+
+### 4.2 本地 Qwen3.6-27B 教师（当前默认）
+
+同一 CPT 基座、同一评测、同一 GRPO 数据；**仅 SFT 蒸馏教师不同**（run-id 以 `*b` 区分，与 4.1 并存）。
+
+| Run | 生成准确率 | 知识准确率 | 困惑度 |
+|-----|:---:|:---:|:---:|
+| R0 base | 0.589 | 0.661 | 7.04 |
+| R2 CPT | — | 0.636 | **5.79** |
+| R1b SFT | **0.646** | 0.638 | — |
+| R3b CPT+SFT | 0.627 | 0.626 | — |
+| R4b +GRPO | **0.654** | 0.635 | — |
+
+**逐阶段增益：**
+
+| 阶段 | 生成 | 知识 | 困惑度 |
+|------|:---:|:---:|:---:|
+| SFT (R1−R0) | **+0.057** | −0.023 | — |
+| CPT (R3−R1) | −0.019 | −0.012 | **−1.25** ✓ |
+| GRPO (R4−R3) | **+0.028** | +0.008 | — |
+
+**GRPO 训练内奖励：** 0.58 → **0.81**（12k 提示，1 epoch，1500 步）。
+
+**A/B 结论：** 仅更换 SFT 教师，SFT 生成增益 **−0.045 → +0.057**，全链路净值 **−0.037 → +0.065**，
+最终模型生成准确率 **0.552 → 0.654**。CPT 困惑度增益不变（−1.25，与教师无关）；知识 MCQ 准确率在
+CoT 教师下略降（格式 ↔ 记忆的取舍）。这直接证实 §5 的诊断——「SFT 负增益 = 蒸馏教师太弱」。
 
 ---
 
@@ -130,7 +164,7 @@ Gemini flash-lite 对无 CoT 样本蒸馏生成推理链，拒绝采样保留正
 ## 7. 局限与后续（如何拿到干净的三段正增益）
 
 本次瓶颈是**数据质量**，非管线：
-1. **强教师重蒸馏**（最高杠杆）：用 Claude / Gemini‑2.5‑Pro 生成医学 MCQ 的 CoT（已备好 `ANTHROPIC_API_KEY`），拒绝采样保留正确 → SFT 数据超过 base → SFT 转正、GRPO 泛化更好。约 3–4h + ~$15。
+1. ✅ **强教师重蒸馏（已完成，最高杠杆）：** 改用本地 `Qwen/Qwen3.6-27B`（SGLang 8 卡、`enable_thinking=False`、简洁 CoT、质量门 + 拒绝采样 ~16.6k 条）重蒸馏。**结果见 §4.2：SFT 转正（+0.057）、全链路 0.589 → 0.654**，印证"SFT 数据超过 base → SFT 转正"的预测。改用本地推理替代 API，零成本、~2h。
 2. **修 SFT 格式**：去掉"重复打印答案"，训练 EOS，控制 CoT 长度 → 消除 GRPO 的 `clipped_ratio=1.0`，rollout 更快更干净。
 3. **GRPO 调参**：更多提示/步数、KL 与长度奖励调节，改善训练→测试迁移。
 
@@ -141,8 +175,10 @@ Gemini flash-lite 对无 CoT 样本蒸馏生成推理链，拒绝采样保留正
 三套隔离环境（`med-4b-env-setup` 记忆有详述）：`.venv`(评测) · `.venv-train`(CPT/SFT，torch2.8) · `.venv-grpo`(GRPO，trl0.24+vllm0.10.2)。
 ```
 bash setup/install.sh --full
-bash scripts/00_prepare_data.sh          # DISTILL=1 调用 Gemini 蒸馏
+bash setup/install_sglang.sh             # 本地教师推理环境 .venv-sglang
+bash scripts/00_prepare_data.sh          # CPT/SFT/GRPO 开源数据（蒸馏默认 DRY-RUN）
+bash scripts/run_qwen_distill_sglang.sh  # 本地 Qwen3.6-27B 蒸馏 → 合并进 SFT 训练集
 python -m med_pipeline.train.run_cpt     # .venv-train
-bash scripts/run_post_cpt.sh             # R1→R3→评测→R4→瀑布图
+bash scripts/run_post_cpt_qwen.sh        # R1b→R3b→评测→R4b→瀑布图（本地教师矩阵）
 ```
 全部指标 + 增益瀑布柱状图见 W&B 项目 `med-1b7-cpt-sft-grpo`。管线代码遵循 LOD 设计（`configs/` `med_pipeline/{data,tools,train,eval,report}`，单文件单职责、纯函数工具、瘦编排）。

@@ -30,19 +30,21 @@ ALLOW = [
 ]
 
 # (src dir, repo, stage label, one-line desc, metrics line)
+# Weights are the local-Qwen-teacher *b matrix (SFT CoT distilled by Qwen3.6-27B); see the A/B
+# in the project README. CPT is teacher-independent (same checkpoint as before; only its card refreshes).
 MODELS = [
     ("checkpoints/cpt", f"{USER}/qwen3-1.7b-med-zh-cpt", "CPT",
      "Continued pre-training on ~0.9B tokens of Chinese medical text (TCM-heavy).",
-     "held-out perplexity 7.04 → **5.79** (−1.25 vs base)."),
-    ("checkpoints/R1_sft", f"{USER}/qwen3-1.7b-med-zh-sft", "SFT",
-     "Supervised fine-tuning on 60k Chinese medical chain-of-thought examples (from base).",
-     "generative MCQ acc 0.589 → 0.544; knowledge 0.661 → 0.645."),
-    ("checkpoints/R3_cpt_sft", f"{USER}/qwen3-1.7b-med-zh-cpt-sft", "CPT→SFT",
-     "CPT checkpoint then SFT on the same 60k medical CoT.",
-     "generative 0.537; knowledge 0.635 (perplexity gain from CPT retained)."),
-    ("checkpoints/R4_cpt_sft_grpo", f"{USER}/qwen3-1.7b-med-zh-grpo", "CPT→SFT→GRPO",
+     "held-out perplexity 7.04 → **5.79** (−1.25 vs base); teacher-independent."),
+    ("checkpoints/R1b_sft", f"{USER}/qwen3-1.7b-med-zh-sft", "SFT",
+     "Supervised fine-tuning on 60k Chinese medical CoT (local Qwen3.6-27B distillation, from base).",
+     "generative MCQ acc 0.589 → **0.646** (+0.057); knowledge 0.661 → 0.638."),
+    ("checkpoints/R3b_cpt_sft", f"{USER}/qwen3-1.7b-med-zh-cpt-sft", "CPT→SFT",
+     "CPT checkpoint then SFT on the same 60k medical CoT (local-Qwen teacher).",
+     "generative 0.627; knowledge 0.626 (CPT perplexity gain retained)."),
+    ("checkpoints/R4b_cpt_sft_grpo", f"{USER}/qwen3-1.7b-med-zh-grpo", "CPT→SFT→GRPO",
      "Full pipeline: GRPO with verifiable MCQ reward (exact-match + format) on top of CPT→SFT.",
-     "generative 0.552; knowledge 0.646; GRPO train reward 0.40 → 0.625."),
+     "generative **0.654**; knowledge 0.635; GRPO train reward 0.58 → 0.81."),
 ]
 
 CARD = """---
@@ -57,22 +59,24 @@ tags: [medical, chinese, qwen3, {tag}]
 {desc}
 
 本模型是 **CPT → SFT → GRPO 增益归因实验**中的 `{stage}` 阶段权重（基座 [{base}](https://huggingface.co/{base})）。
+SFT 的推理链由本地 `Qwen/Qwen3.6-27B` 蒸馏（简洁、thinking-off、`\\boxed{{}}` CoT、质量门 + 拒绝采样）。
 
 ## 本阶段评测
 - {metrics}
 
-## 实验总览（同一固定评测，Qwen3-1.7B）
+## 实验总览（同一固定评测，Qwen3-1.7B · 本地 Qwen3.6-27B 蒸馏教师）
 | 阶段 | 生成准确率 | 知识准确率 | 困惑度 |
 |---|---|---|---|
 | base | 0.589 | 0.661 | 7.04 |
 | CPT | — | 0.636 | 5.79 |
-| SFT | 0.544 | 0.645 | — |
-| CPT+SFT | 0.537 | 0.635 | — |
-| +GRPO | 0.552 | 0.646 | — |
+| SFT | 0.646 | 0.638 | — |
+| CPT+SFT | 0.627 | 0.626 | — |
+| +GRPO | 0.654 | 0.635 | — |
 
-**诚实结论**：CPT 带来清晰的困惑度增益；本次 SFT/GRPO 的下游准确率受限于蒸馏教师偏弱
-（Gemini flash-lite），在已较强的基座上 naive SFT 会轻微降分。这是一个关于"数据质量 > 阶段本身"
-的真实发现。完整报告见项目 `REPORT.md`。
+**结论**：把 SFT 蒸馏教师从 Gemini flash-lite 换成本地 `Qwen/Qwen3.6-27B` 后，SFT 生成增益由
+**−0.045 翻正为 +0.057**，全链路生成准确率 0.589 → **0.654**——证实瓶颈是**蒸馏数据质量**而非
+管线设计。CPT 困惑度增益（−1.25）与教师无关。完整 A/B 对比与报告见
+[GitHub 项目](https://github.com/jiaqianjing/cpt-sft-grpo-med-zh)（`README.md` / `REPORT.md`）。
 
 ## 用法
 ```python

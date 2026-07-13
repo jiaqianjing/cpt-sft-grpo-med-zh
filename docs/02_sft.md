@@ -14,7 +14,11 @@
 | FreedomIntelligence/Huatuo26M-Lite | [🤗 HF](https://huggingface.co/datasets/FreedomIntelligence/Huatuo26M-Lite) | ~177k 医学 QA（无 CoT），采样用于扩展覆盖面 |
 | michaelwzhu/ShenNong_TCM_Dataset | [🤗 HF](https://huggingface.co/datasets/michaelwzhu/ShenNong_TCM_Dataset) | ~112k 中医 QA，采样用于补充 TCM 领域广度 |
 
-> 对无 CoT 样本额外使用 Gemini flash-lite 蒸馏生成推理链，拒绝采样保留答案正确的约 15k 条。
+> 对无 CoT 样本用本地 `Qwen/Qwen3.6-27B`（SGLang、8 卡张量并行）蒸馏生成推理链，
+> 经质量门（简洁、以中文为主、恰好一个 `\boxed{}`、无泄漏的元推理）+ 拒绝采样（答案与
+> 标准答案匹配）保留约 16.6k 条。本报告的结果即基于此本地教师。与原 Gemini flash-lite
+> 教师相比，SFT 的生成准确率增益从 **−0.045 翻正为 +0.057**（详见 [README](../README.md) 的
+> Teacher A/B 对比）——说明制约下游增益的是**蒸馏数据质量**，而非阶段设计。
 
 下面是训练集里的一条**真实样本**：
 

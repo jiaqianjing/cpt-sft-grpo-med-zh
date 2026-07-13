@@ -35,6 +35,31 @@ def _patch_trl_optional_dep_bug() -> None:
                 setattr(u, name, bool(val[0]))
 
 
+def _load_processing_class(init: str, base_id: str):
+    """Load the GRPO tokenizer robustly across the train/GRPO transformers split.
+
+    The training env (transformers 5.x) saves SFT checkpoints whose tokenizer_config the
+    GRPO env (transformers 4.57) can't parse (`extra_special_tokens` as a list ->
+    'list' object has no attribute 'keys'). SFT adds no tokens, so on failure fall back to
+    the BASE tokenizer and graft the checkpoint's saved chat template — reproducing the SFT
+    prompt format exactly. Returns a tokenizer with a guaranteed pad token.
+    """
+    from pathlib import Path
+    from transformers import AutoTokenizer
+    try:
+        tok = AutoTokenizer.from_pretrained(init)
+    except Exception as e:  # noqa: BLE001 - version-skew tokenizer_config; fall back to base
+        print(f"   tokenizer load from {init} failed ({type(e).__name__}); "
+              f"falling back to base {base_id} + checkpoint chat template")
+        tok = AutoTokenizer.from_pretrained(base_id)
+        ct = Path(init) / "chat_template.jinja"
+        if ct.exists():
+            tok.chat_template = ct.read_text()
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    return tok
+
+
 def _anomaly_callback():
     """LOD Pattern 9: warn on sustained zero-reward (reward collapse / format breakdown)."""
     from transformers import TrainerCallback
@@ -81,6 +106,13 @@ def main() -> int:
     import os
     os.environ.setdefault("WANDB_PROJECT", cfg.wandb.project)
 
+    # Repair the init checkpoint's tokenizer BEFORE vLLM/trainer read it from disk (train env
+    # saves transformers 5.x tokenizer_config that the GRPO env's transformers 4.57 can't parse).
+    if args.init_model != "base":
+        from med_pipeline.tools.tokenizer_sync import sync_compatible_tokenizer
+        if sync_compatible_tokenizer(init, cfg.model.base_model_id):
+            print(f"   repaired checkpoint tokenizer for cross-version load: {init}")
+
     _patch_trl_optional_dep_bug()  # must run before importing the GRPO trainer
     from datasets import load_dataset
     from trl import GRPOConfig, GRPOTrainer
@@ -119,6 +151,7 @@ def main() -> int:
         reward_funcs=rewards,
         args=grpo_args,
         train_dataset=ds,
+        processing_class=_load_processing_class(init, cfg.model.base_model_id),
         callbacks=[_anomaly_callback()],
     )
     trainer.train()

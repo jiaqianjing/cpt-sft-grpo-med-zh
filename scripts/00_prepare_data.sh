@@ -2,7 +2,7 @@
 # Prepare CPT / SFT / GRPO data. Slim recipe — all logic lives in med_pipeline.data.*
 #   bash scripts/00_prepare_data.sh                 # full prep (distillation stays DRY-RUN)
 #   SMOKE=--smoke bash scripts/00_prepare_data.sh   # tiny end-to-end validation
-#   DISTILL=1 bash scripts/00_prepare_data.sh       # actually call Gemini (COSTS ~<$15)
+#   DISTILL=1 bash scripts/00_prepare_data.sh       # call an already-running SGLang teacher
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source .venv/bin/activate

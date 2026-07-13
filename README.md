@@ -22,6 +22,9 @@ Full write-up: **[REPORT.md](./REPORT.md)** · design: **[DESIGN.md](./DESIGN.md
 | CPT→SFT | CPT then SFT | [jiaqianjing/qwen3-1.7b-med-zh-cpt-sft](https://huggingface.co/jiaqianjing/qwen3-1.7b-med-zh-cpt-sft) |
 | CPT→SFT→GRPO | full pipeline | [jiaqianjing/qwen3-1.7b-med-zh-grpo](https://huggingface.co/jiaqianjing/qwen3-1.7b-med-zh-grpo) |
 
+> 上表 HF 权重已更新为**本地 Qwen 教师**版本（SFT 生成 0.646 / 全链路 **0.654**，见下方 Results）。
+> 原 Gemini 教师版本（0.544 / 0.552）保留在各 repo 的 HF git 历史中；CPT 权重与教师无关、未变。
+
 📊 All training curves, eval tables, and the gain-attribution **waterfall** →
 [**W&B: med-1b7-cpt-sft-grpo**](https://wandb.ai/jiaqianjing/med-1b7-cpt-sft-grpo)
 
@@ -45,17 +48,34 @@ SFT = R1 - R0      CPT = R3 - R1      GRPO = R4 - R3      CPT-ppl = PPL(R0) - PP
 
 ![CPT→SFT→GRPO gain-attribution waterfall](assets/gain_waterfall.png)
 
+Per-run eval, **local-Qwen distillation teacher** (`Qwen/Qwen3.6-27B`, current default):
+
 | Run | generative | knowledge | perplexity |
 |-----|:---:|:---:|:---:|
 | R0 base | 0.589 | 0.661 | 7.04 |
 | R2 CPT | — | 0.636 | **5.79** |
-| R1 SFT | 0.544 | 0.645 | — |
-| R3 CPT+SFT | 0.537 | 0.635 | — |
-| R4 +GRPO | 0.552 | 0.646 | — |
+| R1 SFT | **0.646** | 0.638 | — |
+| R3 CPT+SFT | 0.627 | 0.626 | — |
+| R4 +GRPO | **0.654** | 0.635 | — |
 
-**Honest finding:** CPT gives a clear perplexity gain (−1.25); SFT/GRPO downstream accuracy is
-limited by a weak distillation teacher (Gemini flash-lite) — data quality dominated stage design.
-GRPO trained correctly (reward 0.40→0.625) but transferred little to test. See REPORT §5–7.
+### Teacher A/B — distillation quality drives the SFT gain
+
+Identical pipeline and eval; only the SFT CoT **teacher** changes. Per-stage generative-accuracy gain:
+
+| Generative gain | Gemini flash-lite (original) | local Qwen3.6-27B (current) |
+|---|:---:|:---:|
+| SFT  (R1−R0)  | −0.045 | **+0.057** |
+| CPT  (R3−R1)  | −0.008 | −0.019 |
+| GRPO (R4−R3)  | +0.015 | +0.028 |
+| **net R0→R4** | **−0.037** | **+0.065** |
+
+**Honest finding:** CPT gives a clear perplexity gain (−1.25, teacher-independent). The original run
+used a weak teacher (Gemini flash-lite) and SFT actively *hurt* generative accuracy — the full
+pipeline landed **below** base (0.552 < 0.589). Swapping in a stronger, format-aligned local teacher
+(concise, thinking-off, quality-gated `\boxed{}` CoT) flips SFT to a clear **+0.057** and lifts the
+full pipeline to **0.654** — confirming the earlier diagnosis that **data quality, not stage design,
+was the bottleneck**. GRPO adds a small but consistent gain (+0.028 gen; reward 0.58→0.81). Knowledge-MCQ
+accuracy dips slightly under the CoT teacher (a format-vs-recall trade). See REPORT §5–7.
 
 ## 📚 Training Data
 
@@ -75,7 +95,9 @@ GRPO trained correctly (reward 0.40→0.625) but transferred little to test. See
 | [FreedomIntelligence/Huatuo26M-Lite](https://huggingface.co/datasets/FreedomIntelligence/Huatuo26M-Lite) | ~177k 医学 QA（无 CoT），采样用于扩展覆盖面 |
 | [michaelwzhu/ShenNong_TCM_Dataset](https://huggingface.co/datasets/michaelwzhu/ShenNong_TCM_Dataset) | ~112k 中医 QA，采样用于补充 TCM 领域广度 |
 
-> SFT 阶段额外使用 Gemini flash-lite 对无 CoT 样本进行蒸馏，生成推理链。
+> 无 CoT 样本用本地 `Qwen/Qwen3.6-27B`（SGLang、8 卡张量并行）蒸馏生成推理链，
+> 经质量门 + 拒绝采样保留约 16.6k 条。上表结果即基于此本地教师；与原 Gemini
+> flash-lite 教师的对比见上方 **Teacher A/B**（本地教师把 SFT 生成增益从 −0.045 翻正为 +0.057）。
 
 ### GRPO（强化学习）— 可验证答案的选择题
 
@@ -105,8 +127,10 @@ scripts/       prepare-data · run-matrix · post-CPT · HF upload
 
 ```bash
 bash setup/install.sh --full     # 3 envs: eval / train (torch2.8) / grpo (trl+vllm)
+                               # local teacher additionally uses setup/install_sglang.sh
 python setup/check_env.py --full # verify GPUs, versions, .env keys
-bash scripts/00_prepare_data.sh  # CPT/SFT/GRPO data (DISTILL=1 uses GEMINI_API_KEY)
+bash setup/install_sglang.sh
+bash scripts/run_qwen_distill_sglang.sh  # local Qwen teacher -> merge refreshed SFT data
 python -m med_pipeline.train.run_cpt   # then:
 bash scripts/run_post_cpt.sh     # R1→R3→evals→R4→gain waterfall to W&B
 ```

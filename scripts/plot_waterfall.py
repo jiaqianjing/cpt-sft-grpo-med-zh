@@ -2,7 +2,7 @@
 
 Palette (validated CVD-safe, dataviz skill): blue #2a78d6 = gain, orange #eb6834 = loss,
 neutral gray = anchors (base/final). Every bar is value-labelled with a sign, so polarity
-is never color-alone. Numbers are the published Qwen3-1.7B results (REPORT.md §4).
+is never color-alone. Numbers are the local-Qwen-teacher Qwen3-1.7B results (README A/B; REPORT.md §4).
 """
 
 from __future__ import annotations
@@ -17,9 +17,9 @@ from matplotlib.patches import Patch
 SURF, INK, INK2, MUT = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
 GRID, GAIN, LOSS, ANCHOR = "#e1e0d9", "#2a78d6", "#eb6834", "#b8b7b0"
 
-# --- results (REPORT.md §4) ---
-GEN = {"R0 base": 0.589, "R1 SFT": 0.544, "R3 CPT+SFT": 0.537, "R4 +GRPO": 0.552}
-STAGES = [("+SFT", 0.589, 0.544), ("+CPT", 0.544, 0.537), ("+GRPO", 0.537, 0.552)]
+# --- results: local Qwen3.6-27B distillation teacher (REPORT.md §4) ---
+GEN = {"R0 base": 0.589, "R1 SFT": 0.646, "R3 CPT+SFT": 0.627, "R4 +GRPO": 0.654}
+STAGES = [("+SFT", 0.589, 0.646), ("+CPT", 0.646, 0.627), ("+GRPO", 0.627, 0.654)]
 PPL = {"base": 7.04, "CPT": 5.79}
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 11,
@@ -46,12 +46,12 @@ for i, (name, prev, cur) in enumerate(STAGES, start=1):
              color=(GAIN if d >= 0 else LOSS), fontsize=10, fontweight="bold")
     # connector
     axA.plot([i - 1 + 0.3, i - 0.3], [prev, prev], color=MUT, lw=1, ls=(0, (3, 3)), zorder=2)
-axA.plot([3 + 0.3, 4 - 0.3], [0.552, 0.552], color=MUT, lw=1, ls=(0, (3, 3)), zorder=2)
+axA.plot([3 + 0.3, 4 - 0.3], [0.627, 0.627], color=MUT, lw=1, ls=(0, (3, 3)), zorder=2)
 # anchor value labels
 axA.text(0, GEN["R0 base"] + 0.002, f'{GEN["R0 base"]:.3f}', ha="center", va="bottom", color=INK, fontweight="bold")
 axA.text(4, GEN["R4 +GRPO"] + 0.002, f'{GEN["R4 +GRPO"]:.3f}', ha="center", va="bottom", color=INK, fontweight="bold")
 axA.set_xticks(list(x)); axA.set_xticklabels(labels, color=INK2)
-axA.set_ylim(floor, 0.605); axA.set_ylabel("Generative MCQ accuracy")
+axA.set_ylim(floor, 0.70); axA.set_ylabel("Generative MCQ accuracy")
 axA.set_title("Per-stage gain attribution  ·  generative accuracy", color=INK, fontsize=12, pad=10, loc="left")
 axA.grid(axis="y", color=GRID, lw=0.8, zorder=0); axA.set_axisbelow(True)
 for s in ("top", "right"): axA.spines[s].set_visible(False)
@@ -59,7 +59,7 @@ axA.spines["left"].set_color(MUT); axA.spines["bottom"].set_color(MUT)
 axA.legend(handles=[Patch(color=ANCHOR, label="level (base / final)"),
                     Patch(color=GAIN, label="gain (↑)"),
                     Patch(color=LOSS, label="loss (↓)")],
-           loc="upper right", frameon=False, fontsize=9)
+           loc="upper left", frameon=False, fontsize=9)
 axA.text(0.0, -0.16, "y-axis starts at 0.50 to make per-stage deltas legible.",
          transform=axA.transAxes, color=MUT, fontsize=8.5)
 
@@ -82,8 +82,8 @@ axB.spines["left"].set_color(MUT); axB.spines["bottom"].set_color(MUT)
 fig.suptitle("CPT → SFT → GRPO gain attribution  ·  Qwen3-1.7B  ·  Chinese medical",
              fontsize=13.5, fontweight="bold", color=INK, x=0.02, ha="left", y=0.99)
 fig.text(0.02, 0.015,
-         "GRPO trained correctly (reward 0.40→0.625) but transferred little to test; SFT/GRPO downstream "
-         "gains were capped by a weak distillation teacher (Gemini flash-lite). CPT gives the one clear gain. See REPORT.md.",
+         "SFT teacher = local Qwen3.6-27B (concise, thinking-off, boxed CoT). Vs Gemini flash-lite, SFT flips "
+         "from -0.045 to +0.057; GRPO reward rose 0.58→0.81. CPT gives the clear perplexity gain. See REPORT.md.",
          color=MUT, fontsize=8.5)
 fig.tight_layout(rect=(0, 0.03, 1, 0.96))
 import os

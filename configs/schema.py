@@ -90,15 +90,17 @@ class GRPOCfg(BaseModel):
 
 
 class DistillCfg(BaseModel):
-    """Gemini CoT distillation with rejection sampling (uses GEMINI_API_KEY)."""
+    """Local/API teacher distillation with rejection sampling."""
     model_config = _Strict
     enabled: bool = Field(default=True)
-    teacher_model: str = Field(default="gemini-2.5-flash-lite")  # cheapest GA: $0.10/$0.40 per 1M
+    provider: Literal["qwen_sglang", "gemini"] = "qwen_sglang"
+    teacher_model: str = Field(default="Qwen/Qwen3.6-27B")
+    server_url: str = Field(default="http://127.0.0.1:30000/v1")
     max_questions: int = Field(default=20_000, ge=0, le=500_000)
-    samples_per_question: int = Field(default=1, ge=1, le=8)
-    max_new_tokens: int = Field(default=2048, ge=128, le=8192)
-    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    concurrency: int = Field(default=16, ge=1, le=256)
+    max_new_tokens: int = Field(default=768, ge=128, le=2048)
+    temperature: float = Field(default=0.7, gt=0.0, le=2.0)
+    concurrency: int = Field(default=64, ge=1, le=256)
+    batch_size: int = Field(default=256, ge=16, le=2048)
     keep_only_correct: bool = Field(default=True)  # rejection sampling on gold match
 
 
