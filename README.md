@@ -77,6 +77,24 @@ full pipeline to **0.654** — confirming the earlier diagnosis that **data qual
 was the bottleneck**. GRPO adds a small but consistent gain (+0.028 gen; reward 0.58→0.81). Knowledge-MCQ
 accuracy dips slightly under the CoT teacher (a format-vs-recall trade). See REPORT §5–7.
 
+## 经验与启示 — CPT 还值得做吗？
+
+一条可复用的结论:**CPT 优化的是「困惑度」而非「任务准确率」;在已经很强的现代 base 上、用有限
+语料做全参 CPT,若目标指标是任务准确率(如 MCQ),CPT 往往不划算。**
+
+本实验的判决很清楚:CPT 困惑度 **−1.25(✅ 干净正收益)**,但下游 MCQ 准确率 R3−R1 =
+生成 **−0.019** / 知识 **−0.012(❌ 反而略降)**。而同一套实验里,仅更换 SFT 蒸馏教师就带来
+**+0.057** —— 比 CPT 在准确率轴上的贡献大一个数量级,方向还相反。
+
+**但这不等于「CPT 无用」,关键在于三个对齐:**
+- **指标对齐** —— 目标是生成质量 / 术语 / 领域召回 → 困惑度收益会兑现,CPT 值得;目标是选择题准确率 → 优先堆 SFT/GRPO 数据质量。
+- **base 领域缺口** —— base 越强、语料越常见,CPT 边际收益越低;低资源语言 / 专有语料 / cutoff 后新知识才有明显空间。
+- **规模与手法** —— 0.9B tokens 偏小;全参 CPT 会把分布拉向语料风格、冲淡 base 已有先验(这正是 R3 掉分的机制),用 LoRA / 更低 LR / 混入通用数据回放可缓解。
+
+**元经验:** ① 把干预对齐到你最终衡量的指标(CPT ↔ 困惑度、SFT ↔ 格式/推理、GRPO ↔ 可验证奖励),错配就白花算力;② **数据质量 >> 多加阶段** —— 全 study 最大的单点杠杆是把 SFT 教师换强,而非新增流程。
+
+> 注:这是 **n=1** 证据(单 base / 单领域 / 0.9B 语料 / 全参 / MCQ 指标),足以支撑「这类设定下 CPT 不划算」,不足以证明「CPT 普遍无用」。
+
 ## 📚 Training Data
 
 ### CPT（继续预训练）— 原始医学文本，约 0.9B tokens
